@@ -1,0 +1,35 @@
+suji/node_modules/*
+
+# --- 语言/构建工具 (按需组合) ---
+# === Rust (后端) ===
+# 编译产物、依赖目录
+**/target/
+# 生成的 Cargo.lock 文件对于二进制项目来说是建议提交的，如果你需要提交，可移除或注释下一行
+# Cargo.lock
+
+# === Node.js / 前端 ===
+# 依赖目录 (如果你的前端使用了 Node.js)
+node_modules/
+# 构建产物 (前端构建)
+dist/
+dist-ssr/
+*.local
+
+# === 开发环境/编辑器 ===
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# macOS
+.DS_Store
+
+# --- Tauri 特有 ---
+# Tauri 自动生成的 TypeScript 类型声明文件 (例如 capabilities 的自动补全)
+# 此目录通常由 `tauri dev` 生成，不应提交
+src-tauri/gen/
+
+# 可选：如果使用 `.taurignore` 文件
+.taurignore

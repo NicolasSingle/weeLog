@@ -1,0 +1,57 @@
+{
+  "$schema": "https://v2.tauri.app/gen/config/schema.json",
+  "productName": "速记日报",
+  "version": "0.1.0",
+  "identifier": "com.suji.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "速记日报",
+        "width": 1000,
+        "height": 700,
+        "center": true,
+        "visible": false
+      },
+      {
+        "label": "float",
+        "title": "速记日报",
+        "width": 320,
+        "height": 240,
+        "minWidth": 320,
+        "minHeight": 180,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "resizable": true,
+        "visible": true,
+        "x": 20,
+        "y": 20
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.ico"],
+    "targets": "all",
+    "category": "Utility",
+    "publisher": "You"
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:suji_data.db"]
+    }
+  }
+}

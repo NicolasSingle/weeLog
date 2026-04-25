@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Light theme (default) */
+  --color-background: #F7F8FA;
+  --color-foreground: #1D2129;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1D2129;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #1D2129;
+  --color-primary: #165DFF;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #4080FF;
+  --color-secondary-foreground: #FFFFFF;
+  --color-muted: #F7F8FA;
+  --color-muted-foreground: #86909C;
+  --color-accent: #F7F8FA;
+  --color-accent-foreground: #4E5969;
+  --color-destructive: #F53F3F;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-input: #E5E7EB;
+  --color-ring: #165DFF;
+
+  /* Border radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+
+:root {
+  --background: 0 0% 97.6%; /* #F7F8FA */
+  --foreground: 220 14% 14.3%; /* #1D2129 */
+  --card: 0 0% 100%; /* #FFFFFF */
+  --card-foreground: 220 14% 14.3%; /* #1D2129 */
+  --popover: 0 0% 100%; /* #FFFFFF */
+  --popover-foreground: 220 14% 14.3%; /* #1D2129 */
+  --primary: 221 100% 58%; /* #165DFF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 216 100% 67%; /* #4080FF */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 220 14% 96%; /* #F7F8FA */
+  --muted-foreground: 220 9% 53%; /* #86909C */
+  --accent: 220 14% 96%; /* #F7F8FA */
+  --accent-foreground: 220 14% 30%; /* #4E5969 */
+  --destructive: 0 72% 59%; /* #F53F3F */
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%; /* #E5E7EB */
+  --input: 220 13% 91%; /* #E5E7EB */
+  --ring: 221 100% 58%; /* #165DFF */
+}
+
+.dark {
+  --background: 220 14% 8.2%; /* #1D2129 */
+  --foreground: 220 14% 97.6%; /* #F7F8FA */
+  --card: 220 13% 18%; /* #2E3238 */
+  --card-foreground: 220 14% 97.6%; /* #F7F8FA */
+  --popover: 220 13% 18%; /* #2E3238 */
+  --popover-foreground: 220 14% 97.6%; /* #F7F8FA */
+  --primary: 221 100% 58%; /* #165DFF */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 216 100% 67%; /* #4080FF */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 220 13% 18%; /* #2E3238 */
+  --muted-foreground: 220 9% 64%; /* #6B7280 */
+  --accent: 220 13% 18%; /* #2E3238 */
+  --accent-foreground: 220 14% 84%; /* #A1A7B3 */
+  --destructive: 0 72% 59%; /* #F53F3F */
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 25%; /* #3E4248 */
+  --input: 220 13% 25%; /* #3E4248 */
+  --ring: 221 100% 58%; /* #165DFF */
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+/* Tauri drag region styles */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] [role="button"] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
