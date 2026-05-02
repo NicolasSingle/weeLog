@@ -20,20 +20,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The app has two windows controlled by Tauri's window API:
 - **main window** (1000x700): Full application with sidebar navigation (Todo, Report, Settings views)
-- **float window** (320x240, always-on-top, frameless): Compact overlay, summoned via `Ctrl+Shift+D`
+- **float window** (480x48, always-on-top, frameless, non-resizable): Listary-style quick input bar, summoned via `Ctrl+Shift+D`. Supports three input modes:
+  - `todo:内容` — creates a new todo
+  - `done:关键词` — fuzzy matches pending todos to complete
+  - plain text — appends to today's report
+
+### Data Flow
+
+1. `src/lib/db.ts` initializes SQLite and runs migrations (including `ALTER TABLE` for new columns)
+2. `src/hooks/useTodos.ts` and `src/hooks/useReports.ts` load data from SQLite on mount, write to both SQLite and Zustand store
+3. `src/lib/store.ts` holds in-memory state shared across all components
+4. Components read from the Zustand store, call hook methods to persist changes
+
+### Hybrid Report Mode
+
+Completed todos automatically appear in the daily report timeline alongside quick notes. The `ReportEditor` merges `todos` (filtered by `completedAt` date) with `reports` (filtered by `date`) into a unified chronological timeline. No separate "generate report" step is needed.
 
 ### Key Modules
 
 | Path | Purpose |
 |------|---------|
-| `src/lib/store.ts` | Zustand global state (todos, reports, theme, UI state) |
-| `src/lib/db.ts` | SQLite database initialization and table creation |
+| `src/lib/store.ts` | Zustand global state (todos, reports, UI state) |
+| `src/lib/db.ts` | SQLite init, table creation, column migrations |
 | `src/types/index.ts` | TypeScript interfaces: `Todo`, `Report` |
+| `src/hooks/useTodos.ts` | CRUD + reorder/archive/expire logic for todos |
+| `src/hooks/useReports.ts` | CRUD for reports, date-based lookup |
 | `src/components/MainLayout.tsx` | Main window shell with sidebar navigation |
-| `src/components/FloatingWindow.tsx` | Compact floating window UI |
-| `src/components/TodoPage.tsx` | Todo management view |
-| `src/components/ReportPage.tsx` | Daily reports with calendar/timeline views |
-| `src-tauri/src/lib.rs` | Rust entry point, system tray setup, window management |
+| `src/components/FloatingWindow.tsx` | Compact floating window with edge-snap |
+| `src/components/CommandInput.tsx` | Listary-style input (todo/done/report modes) |
+| `src/components/TodoList.tsx` | Filterable, sortable, draggable todo list |
+| `src/components/ReportEditor.tsx` | Hybrid timeline: completed todos + quick notes |
+| `src-tauri/src/lib.rs` | Rust entry point, tray icon, window management |
 
 ### Data Models
 
@@ -46,6 +63,8 @@ interface Todo {
   priority: 'high' | 'medium' | 'low'
   status: 'pending' | 'completed' | 'expired'
   tags: string[]
+  sortOrder: number
+  archived: boolean
   createdAt: string
   updatedAt: string
   completedAt: string | null
@@ -81,8 +100,11 @@ pnpm install      # Install Node dependencies
 
 ## Development Notes
 
-- The Tauri context is configured in `src-tauri/tauri.conf.json` with two windows (labels: "main", "float")
-- SQLite database (`suji_data.db`) is preloaded via `tauri-plugin-sql` plugin configuration
-- Global shortcut `Ctrl+Shift+D` triggers the floating window (configured in system shortcuts plugin)
+- Tauri config is in `src-tauri/tauri.conf.json` with two window labels: "main" and "float"
+- `productName` must be ASCII-only (currently "Suji") — WiX toolset for Windows MSI packaging does not support non-ASCII characters
+- SQLite database (`suji_data.db`) is preloaded via `tauri-plugin-sql` plugin config
+- Database schema changes use `ALTER TABLE` with try/catch in `db.ts` for backward compatibility
+- Global shortcut `Ctrl+Shift+D` toggles the floating window
 - Theme follows system preference by default, user can override in settings
-- Window state (position, collapsed edge) is managed via Zustand and persisted through the store plugin
+- Window edge-snap: dragging the float window to screen edges collapses it into a thin bar
+- Capabilities are defined in `src-tauri/capabilities/default.json` — both windows ("main", "float") must be listed for permissions to apply
