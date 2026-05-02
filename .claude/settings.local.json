@@ -52,7 +52,8 @@
       "Bash(tasklist)",
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(pnpm tauri *)"
     ]
   }
 }

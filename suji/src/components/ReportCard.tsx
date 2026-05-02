@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import type { Report } from '@/types'
 import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 
 interface TimelineItemProps {
   report: Report
@@ -43,17 +44,12 @@ export function TimelineItem({ report, onClick }: TimelineItemProps) {
             </span>
             <span className="text-xs text-muted-foreground dark:text-muted-foreground">{weekday}</span>
           </div>
-          <svg
+          <ChevronDown
             className={cn(
               "w-4 h-4 text-muted-foreground transition-transform dark:text-muted-foreground",
               isExpanded && "rotate-180"
             )}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          />
         </div>
 
         {/* Content Preview */}

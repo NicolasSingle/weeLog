@@ -6,6 +6,8 @@ export interface Todo {
   priority: 'high' | 'medium' | 'low'
   status: 'pending' | 'completed' | 'expired'
   tags: string[]
+  sortOrder: number
+  archived: boolean
   createdAt: string
   updatedAt: string
   completedAt: string | null

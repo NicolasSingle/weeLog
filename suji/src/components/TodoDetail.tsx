@@ -9,10 +9,11 @@ import { PrioritySelector } from './PrioritySelector'
 import { DateTimePicker } from './DateTimePicker'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Archive, ArchiveRestore } from 'lucide-react'
 
 export function TodoDetail() {
   const { selectedTodo, setSelectedTodo } = useStore()
-  const { updateTodo, deleteTodo } = useTodos()
+  const { updateTodo, deleteTodo, archiveTodo, unarchiveTodo } = useTodos()
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -116,6 +117,22 @@ export function TodoDetail() {
               保存
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              if (selectedTodo.archived) {
+                await unarchiveTodo(selectedTodo.id)
+                toast.success('已取消归档')
+              } else {
+                await archiveTodo(selectedTodo.id)
+                toast.success('已归档')
+              }
+            }}
+          >
+            {selectedTodo.archived ? <ArchiveRestore className="h-4 w-4 mr-1" /> : <Archive className="h-4 w-4 mr-1" />}
+            {selectedTodo.archived ? '取消归档' : '归档'}
+          </Button>
           <Button size="sm" variant="destructive" onClick={handleDelete}>
             删除
           </Button>
@@ -193,10 +210,11 @@ export function TodoDetail() {
             <Badge
               variant={selectedTodo.status === 'completed' ? 'default' : 'outline'}
               className={cn(
-                selectedTodo.status === 'completed' && 'bg-green-500'
+                selectedTodo.status === 'completed' && 'bg-green-500',
+                selectedTodo.status === 'expired' && 'bg-red-500'
               )}
             >
-              {selectedTodo.status === 'completed' ? '已完成' : '进行中'}
+              {selectedTodo.status === 'completed' ? '已完成' : selectedTodo.status === 'expired' ? '已过期' : '进行中'}
             </Badge>
             {selectedTodo.completedAt && (
               <span className="text-xs text-muted-foreground self-center dark:text-muted-foreground">

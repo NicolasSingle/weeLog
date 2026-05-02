@@ -15,11 +15,21 @@ export async function initDb(): Promise<Database> {
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'pending',
       tags TEXT DEFAULT '[]',
+      sort_order INTEGER DEFAULT 0,
+      archived INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       completed_at TEXT
     )
   `)
+
+  // Migration: add new columns if they don't exist
+  try {
+    await db.execute('ALTER TABLE todos ADD COLUMN sort_order INTEGER DEFAULT 0')
+  } catch { /* column already exists */ }
+  try {
+    await db.execute('ALTER TABLE todos ADD COLUMN archived INTEGER DEFAULT 0')
+  } catch { /* column already exists */ }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS reports (

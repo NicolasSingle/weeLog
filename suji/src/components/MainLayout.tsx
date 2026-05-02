@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Button } from './ui/button'
 import { useTheme } from './ThemeProvider'
@@ -38,6 +38,24 @@ export function MainLayout() {
   const handleMaximize = () => appWindow.toggleMaximize()
   const handleClose = () => appWindow.hide()
   const toggleTheme = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '1') { e.preventDefault(); setActiveView('todo') }
+        else if (e.key === '2') { e.preventDefault(); setActiveView('report') }
+        else if (e.key === '3') { e.preventDefault(); setActiveView('settings') }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const navItems = [
     { id: 'todo' as MainView, label: '待办', icon: ListTodo, badge: todayCount },

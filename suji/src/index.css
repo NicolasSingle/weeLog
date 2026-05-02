@@ -98,3 +98,13 @@ body {
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+
+/* Progress bar fill animation */
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.animate-progress-fill {
+  animation: progress-fill 300ms ease-out forwards;
+}

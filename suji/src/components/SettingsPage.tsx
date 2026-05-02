@@ -3,6 +3,7 @@ import { AIModelConfig } from './AIModelConfig'
 import { ShortcutConfig } from './ShortcutConfig'
 import { ThemeConfig } from './ThemeConfig'
 import { DataManagement } from './DataManagement'
+import { StatisticsPanel } from './StatisticsPanel'
 import { Button } from './ui/button'
 import { ArrowLeft, Settings } from 'lucide-react'
 
@@ -39,6 +40,10 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
           <SettingsSection title="数据管理">
             <DataManagement />
+          </SettingsSection>
+
+          <SettingsSection title="数据统计">
+            <StatisticsPanel />
           </SettingsSection>
         </div>
       </div>

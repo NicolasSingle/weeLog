@@ -1,142 +1,157 @@
-import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { format, parseISO, isSameDay, isValid } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { useReports } from '@/hooks/useReports'
+import { useTodos } from '@/hooks/useTodos'
 import { useStore } from '@/lib/store'
 import { Button } from './ui/button'
-import { Textarea } from './ui/textarea'
 import { toast } from 'sonner'
-import type { Report } from '@/types'
+import { ArrowLeft, CheckCircle2, FileText, Plus, Trash2 } from 'lucide-react'
+import type { Todo } from '@/types'
+
+interface TimelineEntry {
+  type: 'todo' | 'note'
+  time: Date
+  todo?: Todo
+  noteText?: string
+  noteIndex?: number
+}
 
 export function ReportEditor() {
   const { reports, updateReport, deleteReport, getReportByDate, createReportForDate } = useReports()
+  const { todos } = useTodos()
   const selectedReportDate = useStore((s) => s.selectedReportDate)
   const setReportPageView = useStore((s) => s.setReportPageView)
   const setSelectedReportDate = useStore((s) => s.setSelectedReportDate)
 
-  const [content, setContent] = useState('')
-  const [tags, setTags] = useState<string[]>([])
-  const [isEditing, setIsEditing] = useState(false)
+  const [noteInput, setNoteInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const [report, setReport] = useState<Report | null>(null)
 
-  // Load report when date changes
-  useEffect(() => {
-    if (selectedReportDate) {
-      const existingReport = getReportByDate(selectedReportDate)
-      if (existingReport) {
-        setReport(existingReport)
-        setContent(existingReport.content)
-        setTags(existingReport.tags)
-      } else {
-        // New report for this date
-        setReport(null)
-        setContent('')
-        setTags([])
-      }
-      setIsEditing(false)
-    }
+  // Get completed todos for the selected date
+  const completedTodosForDate = useMemo(() => {
+    if (!selectedReportDate) return []
+    return todos.filter(t => {
+      if (t.status !== 'completed' || !t.completedAt) return false
+      const completedDate = parseISO(t.completedAt)
+      const selectedDate = parseISO(selectedReportDate)
+      return isValid(completedDate) && isValid(selectedDate) && isSameDay(completedDate, selectedDate)
+    }).sort((a, b) => {
+      if (!a.completedAt || !b.completedAt) return 0
+      return parseISO(a.completedAt).getTime() - parseISO(b.completedAt).getTime()
+    })
+  }, [todos, selectedReportDate])
+
+  // Get report for the selected date
+  const report = useMemo(() => {
+    if (!selectedReportDate) return null
+    return getReportByDate(selectedReportDate) || null
   }, [selectedReportDate, reports, getReportByDate])
+
+  // Parse report content into lines
+  const noteLines = useMemo(() => {
+    if (!report?.content) return []
+    return report.content.split('\n').filter(line => line.trim())
+  }, [report])
+
+  // Build unified timeline
+  const timeline = useMemo((): TimelineEntry[] => {
+    const entries: TimelineEntry[] = []
+
+    // Add completed todos
+    for (const todo of completedTodosForDate) {
+      entries.push({
+        type: 'todo',
+        time: parseISO(todo.completedAt!),
+        todo,
+      })
+    }
+
+    // Add notes
+    for (let i = 0; i < noteLines.length; i++) {
+      const line = noteLines[i]
+      // Try to extract time from report createdAt, or use current time
+      const time = report ? parseISO(report.createdAt) : new Date()
+      entries.push({
+        type: 'note',
+        time,
+        noteText: line,
+        noteIndex: i,
+      })
+    }
+
+    // Sort by time
+    entries.sort((a, b) => a.time.getTime() - b.time.getTime())
+
+    return entries
+  }, [completedTodosForDate, noteLines, report])
 
   const handleBack = () => {
     setSelectedReportDate(null)
     setReportPageView('list')
   }
 
-  const handleSave = async () => {
-    if (!selectedReportDate || !content.trim()) return
+  const handleAddNote = async () => {
+    if (!selectedReportDate || !noteInput.trim()) return
 
     setIsSaving(true)
     try {
-      // Extract tags from content
-      const extractedTags = content.match(/#\w+/g)?.map((t: string) => t.slice(1)) || []
-
+      const newContent = noteInput.trim()
       if (report) {
-        await updateReport(report.id, {
-          content: content.trim(),
-          tags: extractedTags,
-        })
-        toast.success('日报已更新')
+        const updatedContent = report.content
+          ? report.content + '\n' + newContent
+          : newContent
+        await updateReport(report.id, { content: updatedContent })
       } else {
-        await createReportForDate(selectedReportDate, content.trim())
-        toast.success('日报已创建')
+        await createReportForDate(selectedReportDate, newContent)
       }
-
-      setIsEditing(false)
-      setSelectedReportDate(null)
-      setReportPageView('list')
-    } catch (error) {
-      toast.error('保存失败')
-      console.error(error)
+      setNoteInput('')
+      toast.success('已添加')
+    } catch {
+      toast.error('添加失败')
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleDelete = async () => {
+  const handleDeleteNote = async (noteIndex: number) => {
     if (!report) return
+    const newLines = noteLines.filter((_, i) => i !== noteIndex)
+    const newContent = newLines.join('\n')
+    try {
+      if (newContent) {
+        await updateReport(report.id, { content: newContent })
+      } else {
+        await deleteReport(report.id)
+      }
+      toast.success('已删除')
+    } catch {
+      toast.error('删除失败')
+    }
+  }
 
+  const handleDeleteReport = async () => {
+    if (!report) return
     try {
       await deleteReport(report.id)
       toast.success('日报已删除')
       setSelectedReportDate(null)
       setReportPageView('list')
-    } catch (error) {
+    } catch {
       toast.error('删除失败')
     }
   }
 
-  const handleExportMarkdown = () => {
-    if (!content) return
-
-    const frontmatter = `---
-date: "${selectedReportDate}"
-tags: [${tags.map((t) => `"${t}"`).join(', ')}]
----
-
-`
-    const markdown = frontmatter + content
-
-    // Create and download file
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `日报_${selectedReportDate}.md`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    toast.success('已导出 Markdown')
-  }
-
-  const handleExportJSON = () => {
-    const data = {
-      date: selectedReportDate,
-      content,
-      tags,
-      createdAt: report?.createdAt,
-      updatedAt: report?.updatedAt,
+  const handleNoteKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleAddNote()
     }
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `日报_${selectedReportDate}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    toast.success('已导出 JSON')
   }
 
   if (!selectedReportDate) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground text-sm dark:text-muted-foreground">请选择一个日期</p>
+        <p className="text-muted-foreground text-sm">请选择一个日期</p>
       </div>
     )
   }
@@ -151,100 +166,94 @@ tags: [${tags.map((t) => `"${t}"`).join(', ')}]
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h2 className="text-base font-semibold text-foreground dark:text-foreground">
-                {formattedDate}
-              </h2>
-              <p className="text-xs text-muted-foreground dark:text-muted-foreground">{weekday}</p>
+              <h2 className="text-base font-semibold text-foreground">{formattedDate}</h2>
+              <p className="text-xs text-muted-foreground">{weekday}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {completedTodosForDate.length} 已完成 · {noteLines.length} 笔记
+            </span>
             {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleExportMarkdown} className="h-8 text-xs">
-                  MD
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExportJSON} className="h-8 text-xs">
-                  JSON
-                </Button>
-              </>
-            )}
-            {isEditing ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="h-8 text-xs">
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving || !content.trim()}
-                  className="h-8 text-xs"
-                >
-                  {isSaving ? '保存中...' : '保存'}
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="h-8 text-xs"
-              >
-                {report ? '编辑' : '写日报'}
-              </Button>
-            )}
-            {report && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDelete}
-                className="h-8 w-8 p-0 hover:text-destructive hover:bg-destructive/10"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+              <Button variant="ghost" size="sm" onClick={handleDeleteReport} className="h-8 w-8 p-0 hover:text-destructive hover:bg-destructive/10">
+                <Trash2 className="w-4 h-4" />
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Timeline Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="bg-card dark:bg-card rounded-lg border border-border dark:border-border p-4">
-          {isEditing ? (
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="今天做了什么？使用 #标签 来添加标签..."
-              className="min-h-[300px] resize-none border-0 p-0 focus-visible:ring-0 text-sm leading-relaxed bg-transparent"
-              autoFocus
-            />
-          ) : (
-            <div className="min-h-[300px] text-sm leading-relaxed text-foreground dark:text-foreground whitespace-pre-wrap">
-              {content || (
-                <span className="text-muted-foreground dark:text-muted-foreground">暂无内容</span>
-              )}
-            </div>
-          )}
+        {timeline.length === 0 ? (
+          <div className="text-center text-muted-foreground text-sm py-12">
+            <FileText className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
+            <p>当天没有记录</p>
+            <p className="text-xs mt-1">完成待办或添加速记笔记后将自动显示在这里</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {timeline.map((entry) => (
+              <div key={`${entry.type}-${entry.type === 'todo' ? entry.todo!.id : entry.noteIndex}`} className="group">
+                {entry.type === 'todo' ? (
+                  // Completed todo entry
+                  <div className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-accent/50 transition-colors">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-foreground">{entry.todo!.title}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {format(entry.time, 'HH:mm')}
+                        {entry.todo!.priority === 'high' && ' · 高优先级'}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Note entry
+                  <div className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-accent/50 transition-colors group">
+                    <FileText className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-foreground">{entry.noteText}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {format(entry.time, 'HH:mm')} · 速记
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteNote(entry.noteIndex!)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Tags */}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-border dark:border-border">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary text-xs px-2 py-0.5 rounded-full"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
+        {/* Add quick note input */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              onKeyDown={handleNoteKeyDown}
+              placeholder="添加速记笔记..."
+              className="flex-1 h-9 px-3 text-sm rounded-md border border-input bg-transparent outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+            />
+            <Button
+              size="sm"
+              onClick={handleAddNote}
+              disabled={!noteInput.trim() || isSaving}
+              className="h-9"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

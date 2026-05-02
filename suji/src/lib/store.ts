@@ -6,15 +6,11 @@ export interface WindowPosition {
   y: number
 }
 
-export type TodoCategory = 'today' | 'week' | 'all' | 'completed'
-type ActiveTab = 'suji' | 'todo' | 'report' | 'settings'
+export type TodoCategory = 'today' | 'week' | 'all' | 'completed' | 'archived'
 type ReportView = 'calendar' | 'timeline'
 type ReportPageView = 'list' | 'editor'
-type ThemeMode = 'light' | 'dark' | 'system'
 
 interface AppState {
-  activeTab: ActiveTab
-  setActiveTab: (tab: ActiveTab) => void
   todos: Todo[]
   setTodos: (todos: Todo[]) => void
   addTodo: (todo: Todo) => void
@@ -36,6 +32,12 @@ interface AppState {
   setSearchQuery: (query: string) => void
   priorityFilter: 'all' | 'high' | 'medium' | 'low'
   setPriorityFilter: (priority: 'all' | 'high' | 'medium' | 'low') => void
+  // Selection mode
+  isSelectionMode: boolean
+  selectedTodoIds: Set<string>
+  toggleSelectionMode: () => void
+  toggleTodoSelection: (id: string) => void
+  clearSelection: () => void
   // Report page state
   reportView: ReportView
   setReportView: (view: ReportView) => void
@@ -45,14 +47,9 @@ interface AppState {
   setSelectedReportDate: (date: string | null) => void
   reportSearchQuery: string
   setReportSearchQuery: (query: string) => void
-  // Theme state
-  themeMode: ThemeMode
-  setThemeMode: (mode: ThemeMode) => void
 }
 
 export const useStore = create<AppState>((set) => ({
-  activeTab: 'suji',
-  setActiveTab: (tab) => set({ activeTab: tab }),
   todos: [],
   setTodos: (todos) => set({ todos }),
   addTodo: (todo) => set((state) => ({ todos: [todo, ...state.todos] })),
@@ -83,6 +80,20 @@ export const useStore = create<AppState>((set) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   priorityFilter: 'all',
   setPriorityFilter: (priority) => set({ priorityFilter: priority }),
+  // Selection mode
+  isSelectionMode: false,
+  selectedTodoIds: new Set<string>(),
+  toggleSelectionMode: () => set((state) => ({
+    isSelectionMode: !state.isSelectionMode,
+    selectedTodoIds: new Set<string>(),
+  })),
+  toggleTodoSelection: (id) => set((state) => {
+    const newSet = new Set(state.selectedTodoIds)
+    if (newSet.has(id)) newSet.delete(id)
+    else newSet.add(id)
+    return { selectedTodoIds: newSet }
+  }),
+  clearSelection: () => set({ selectedTodoIds: new Set<string>() }),
   // Report page state
   reportView: 'calendar' as ReportView,
   setReportView: (view: ReportView) => set({ reportView: view }),
@@ -92,7 +103,4 @@ export const useStore = create<AppState>((set) => ({
   setSelectedReportDate: (date: string | null) => set({ selectedReportDate: date }),
   reportSearchQuery: '',
   setReportSearchQuery: (query: string) => set({ reportSearchQuery: query }),
-  // Theme state
-  themeMode: 'system' as ThemeMode,
-  setThemeMode: (mode: ThemeMode) => set({ themeMode: mode }),
 }))
